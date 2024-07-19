@@ -33,11 +33,6 @@ output:
   rmdformats::downcute:
     use_bookdown: yes
     lightbox: yes
-  bookdown::gitbook:
-    config:
-      download: "pdf"
-      sharing:
-        github: yes
   bookdown::pdf_book:
     template: latex/template.tex
     citation_package: natbib
@@ -74,7 +69,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 ```{r Options, include=FALSE}
 ### Customized options for this document
 # Add necessary packages here
-Packages <- c("tidyverse", "cli", "HDInterval")
+Packages <- c("tidyverse", "cli", "HDInterval", "ggcorrplot")
 # Install them
 InstallPackages(Packages)
 
@@ -328,8 +323,8 @@ ll_prior <- function(theta) {
   sum(
     dunif(theta[1], min = 0, max = 1, log = TRUE),        # beta_1
     dunif(theta[2], min = 0, max = 1, log = TRUE),        # beta_2
-    dunif(theta[5], min = 6000, max = 2e5, log = TRUE),   # S_T
-    dunif(theta[6], min = 0, max = 1000, log = TRUE)      # sigma    
+    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),   # S_T
+    dunif(theta[6], min = 0, max = 10, log = TRUE)        # sigma    
   )
 }
 ```
@@ -519,7 +514,7 @@ for (i in c(1:2, 5:6)) {
 }
 ```
 
-#### Posterior likelihood
+#### Posterior likelihood and correlations
 
 ```{r}
 # Save the results
@@ -527,6 +522,15 @@ posterior_joppa <- as.tibble(posterior[, -(3:4)])
 # Mean loglikelihood of the data
 mean(posterior_joppa$data)
 ```
+
+```{r}
+library("ggcorrplot")
+posterior_joppa %>% 
+  select(beta_1, beta_2, S_T) %>% 
+  cor() %>% 
+  ggcorrplot(type = "lower", lab = TRUE)
+```
+
 
 #### Taxonomic efficiency
 
@@ -557,7 +561,7 @@ ll_prior <- function(theta) {
   sum(
     dunif(theta[1], min = 0, max = 1, log = TRUE),       # beta_1
     dunif(theta[5], min = 6000, max = 1e5, log = TRUE),  # S_T
-    dunif(theta[6], min = 0, max = 1000, log = TRUE)     # sigma    
+    dunif(theta[6], min = 0, max = 10, log = TRUE)       # sigma    
   )
 }
 ```
@@ -634,6 +638,16 @@ posterior_no_progress <- as.tibble(posterior[, -(2:4)])
 mean(posterior_no_progress$data)
 ```
 
+
+```{r}
+library("ggcorrplot")
+posterior_no_progress %>% 
+  select(beta_1, S_T) %>% 
+  cor() %>% 
+  ggcorrplot(type = "lower", lab = TRUE)
+```
+
+
 #### Taxonomic efficiency
 
 The taxonomic efficiency is constant:
@@ -654,8 +668,8 @@ ll_prior <- function(theta, S_0) {
     dunif(theta[2], min = -10, max = 10, log = TRUE),       # beta_2
     dunif(theta[3], min = -100, max = 100, log = TRUE),     # beta_3
     dunif(theta[4], min = -100, max = 100, log = TRUE),     # beta_4
-    dunif(theta[5], min = 6000, max = 2e5, log = TRUE),     # S_T
-    dunif(theta[6], min = 0, max = 1000, log = TRUE)        # sigma    
+    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),     # S_T
+    dunif(theta[6], min = 0, max = 10, log = TRUE)          # sigma    
   )
 }
 ```
@@ -766,8 +780,8 @@ ll_prior <- function(theta, S_0) {
     dunif(theta[1], min = -10, max = 10, log = TRUE),       # beta_1
     dunif(theta[2], min = -10, max = 10, log = TRUE),       # beta_2
     dunif(theta[3], min = -100, max = 100, log = TRUE),     # beta_3
-    dunif(theta[5], min = 6000, max = 2e5, log = TRUE),     # S_T
-    dunif(theta[6], min = 0, max = 1000, log = TRUE)        # sigma    
+    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),     # S_T
+    dunif(theta[6], min = 0, max = 10, log = TRUE)          # sigma    
   )
 }
 ```
@@ -876,9 +890,9 @@ ll_prior <- function(theta, S_0) {
   sum(
     dunif(theta[1], min = 0, max = 100, log = TRUE),       # beta_1 > 0
     dunif(theta[2], min = 0, max = 100, log = TRUE),       # beta_2 > 0
-    dunif(theta[3], min = 0, max = 100, log = TRUE),     # beta_3 > 0
-    dunif(theta[5], min = 6000, max = 2e5, log = TRUE),    # S_T
-    dunif(theta[6], min = 0, max = 1000, log = TRUE)      # sigma    
+    dunif(theta[3], min = 0, max = 100, log = TRUE),       # beta_3 > 0
+    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),    # S_T
+    dunif(theta[6], min = 0, max = 10, log = TRUE)         # sigma    
   )
 }
 ```
@@ -1020,20 +1034,21 @@ posterior_joppa %>%
   ggplot() +
   geom_density(
     aes(x = S_T, fill = factor("unique"), alpha = 0.8), 
-    adjust = bw.SJ(posterior_no_progress$S_T)/bw.nrd0(posterior_no_progress$S_T),
+    adjust = bw.SJ(posterior_joppa$S_T)/bw.nrd0(posterior_joppa$S_T),
     bounds = c(6000, Inf)
   ) +
   xlim(6000, 15000) +
   scale_fill_manual(values = "#E69F00") +
   labs(
-    title = "", 
-    x = bquote('Simulated values'~(italic(S[T]))), 
+    title = "A", 
+    x = bquote('Number of Species'~(italic(S[T]))), 
     y = "Probability density"
   ) +
   geom_vline(xintercept = joppa_median, col = "red") +
-  geom_vline(xintercept = joppa_hdi, lty = 2) +
+  # geom_vline(xintercept = joppa_hdi, lty = 2) +
   theme_light() +
   theme(legend.position = "none")
+
 # Figure B
 no_progress_hdi <- hdi(posterior_no_progress$S_T)
 no_progress_median <- median(posterior_no_progress$S_T)
@@ -1047,107 +1062,15 @@ posterior_no_progress %>%
   xlim(6000, 1e5) +
   scale_fill_manual(values = "#E69F00") +
   labs(
-    title = "", 
-    x = bquote('Simulated values'~(italic(S[T]))), 
+    title = "B", 
+    x = bquote('Number of Species'~(italic(S[T]))), 
     y = "Probability density"
   ) +
   geom_vline(xintercept = no_progress_median, col = "red") +
-  geom_vline(xintercept = no_progress_hdi, lty = 2) +
+  # geom_vline(xintercept = no_progress_hdi, lty = 2) +
   theme_light() +
   theme(legend.position = "none")
 ```
 
-## Comparing predicted and observed numbers of species
-
-```{r}
-# Predicted number of species
-S_pred <- function(
-    data, 
-    S_0, 
-    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
-    theta) {
-  model <- match.arg(model)
-  
-  # A vector for the cumulative sum
-  sum_S <- numeric(length(data$Y) + 1)
-  sum_S[1] <- S_0
-  
-  # Values predicted by the model
-  for (i in seq_along(data$Y)) {
-    # Cumulative sum
-    sum_S[i + 1] <- sum_S[i] + S_i(i, data$T, data$Y, model, theta, sum_S)
-  }
-  return(sum_S)
-}
-```
-
-
-```{r}
-# Plot observed and predicted numbers of species
-fig_S <- function(
-    data, 
-    S_0, 
-    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
-    theta) {
-  model <- match.arg(model)
-
-  tibble(
-    Year = c(1822, 1822 + 5 * data$Y), 
-    Estimated = S_pred(data, S_0, model, theta), 
-    Observed = c(S_0, cumsum(data$S) + S_0)
-  ) %>%
-    pivot_longer(cols = c("Estimated", "Observed")) %>%
-    rename(`Number of Species` = name, Number = value) %>%
-    ggplot() + geom_line(aes(x = Year, y = Number, color = `Number of Species`)) +
-    scale_y_log10() %>%
-    return
-}
-```
-
-Joppa
-
-```{r}
-joppa_median <- which.min(abs(posterior_joppa$S_T - median(posterior_joppa$S_T)))
-
-fig_S(checklist, 1, "Joppa", as.numeric(c(posterior_joppa[joppa_median, 1:2], rep(NA, 2), posterior_joppa[joppa_median, 3:4])))
-
-# Number of species
-posterior_joppa$S_T[joppa_median]
-# Likelihood
-posterior_joppa$data[joppa_median]
-```
-
-
-
-No progress
-
-```{r}
-no_progress_median <- which.min(abs(posterior_no_progress$S_T - median(posterior_no_progress$S_T)))
-
-fig_S(checklist, 1, "NoProgress", as.numeric(c(posterior_no_progress[no_progress_median, 1], rep(NA, 3), posterior_no_progress[no_progress_median, 2:3])))
-
-# Number of species
-posterior_no_progress$S_T[no_progress_median]
-# Likelihood
-posterior_no_progress$data[no_progress_median]
-```
-
-Valeurs les plus vraisemblables
-
-```{r}
-posterior_no_progress %>% 
-  arrange(desc(data)) %>% 
-  head(100) %>% 
-  ggplot() + 
-    geom_density(aes(x = S_T))
-```
-
-
-```{r}
-posterior_no_progress %>% 
-  ggplot(aes(x = S_T, y = data)) + 
-  geom_point() +
-  geom_smooth()
-```
 
 `r if (!knitr:::is_latex_output()) '# References {-}'`
