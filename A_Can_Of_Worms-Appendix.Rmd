@@ -410,7 +410,7 @@ The model is estimated after setting up the parameters.
 
 ```{r}
 # Number of steps
-iterations <- 1e6
+iterations <- 1e7
 
 # Standard deviation of the random walk (for each parameter). Tuned by trials.
 sigma_proposal <- c(1e-4, 1e-7, 0, 0, 1e3, 1e-1)
@@ -475,11 +475,11 @@ The autocorrelation of the estimations is shown:
 acf(chain[-(1:burn_in), c(1:2, 5:6)], lag.max = 1000)
 ```
 
-Our choice is to keep an estimation out of 1000.
+Our choice is to keep an estimation out of 5000.
 
 ```{r}
-# Delete burn-in and keep 1/1000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 1000), ]
+# Delete burn-in and keep 1/5000 of the data
+posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
 ```
 
 
@@ -518,7 +518,7 @@ for (i in c(1:2, 5:6)) {
 
 ```{r}
 # Save the results
-posterior_joppa <- as.tibble(posterior[, -(3:4)])
+posterior_joppa <- as_tibble(posterior[, -(3:4)])
 # Mean loglikelihood of the data
 mean(posterior_joppa$data)
 ```
@@ -599,11 +599,11 @@ The acceptance rate in the Markov chain is:
 (acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
 ```
 
-Our choice is to keep an estimation out of 1000.
+Our choice is to keep an estimation out of 5000.
 
 ```{r}
 # Delete burn-in and keep 1/5000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 1000), ]
+posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
 ```
 
 #### Distribution of the parameters
@@ -683,10 +683,10 @@ sigma_proposal <- c(1e-4, 1e-5, 1e-6, 1e-8, 1e3, .1)
 theta_0 <- c(
   1e-2,  # beta_1
   1e-6,  # beta_2
-  0,   # beta_3
-  0,    # beta_4
+  0,     # beta_3
+  0,     # beta_4
   1e4,   # S_T
-  1     # sigma
+  1      # sigma
 )
 names(theta_0) <- c("beta_1", "beta_2", "beta_3", "beta_4", "S_T", "sd")
 # Launch the Markov chain
@@ -708,11 +708,11 @@ The acceptance rate in the Markov chain is:
 (acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
 ```
 
-Our choice is to keep an estimation out of 1000.
+Our choice is to keep an estimation out of 5000.
 
 ```{r}
-# Delete burn-in and keep 1/1000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 1000), ]
+# Delete burn-in and keep 1/5000 of the data
+posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
 ```
 
 
@@ -820,11 +820,11 @@ The acceptance rate in the Markov chain is:
 (acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
 ```
 
-Our choice is to keep an estimation out of 1000.
+Our choice is to keep an estimation out of 5000.
 
 ```{r}
-# Delete burn-in and keep 1/1000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 1000), ]
+# Delete burn-in and keep 1/5000 of the data
+posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
 ```
 
 
@@ -933,11 +933,11 @@ The acceptance rate in the Markov chain is:
 ```
 
 
-Our choice is to keep an estimation out of 1000.
+Our choice is to keep an estimation out of 5000.
 
 ```{r}
-# Delete burn-in and keep 1/1000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 1000), ]
+# Delete burn-in and keep 1/5000 of the data
+posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
 ```
 
 #### Distribution of the parameters
@@ -1037,7 +1037,7 @@ posterior_joppa %>%
     adjust = bw.SJ(posterior_joppa$S_T)/bw.nrd0(posterior_joppa$S_T),
     bounds = c(6000, Inf)
   ) +
-  xlim(6000, 15000) +
+  xlim(6000, 12500) +
   scale_fill_manual(values = "#E69F00") +
   labs(
     title = "A", 
@@ -1045,7 +1045,7 @@ posterior_joppa %>%
     y = "Probability density"
   ) +
   geom_vline(xintercept = joppa_median, col = "red") +
-  # geom_vline(xintercept = joppa_hdi, lty = 2) +
+  geom_vline(xintercept = joppa_hdi, lty = 2) +
   theme_light() +
   theme(legend.position = "none")
 
@@ -1067,10 +1067,7 @@ posterior_no_progress %>%
     y = "Probability density"
   ) +
   geom_vline(xintercept = no_progress_median, col = "red") +
-  # geom_vline(xintercept = no_progress_hdi, lty = 2) +
+  geom_vline(xintercept = no_progress_hdi, lty = 2) +
   theme_light() +
   theme(legend.position = "none")
 ```
-
-
-`r if (!knitr:::is_latex_output()) '# References {-}'`
