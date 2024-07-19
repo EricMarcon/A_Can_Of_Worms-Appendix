@@ -74,7 +74,7 @@ knitr::knit_hooks$set(chunk = function(x, options) {
 ```{r Options, include=FALSE}
 ### Customized options for this document
 # Add necessary packages here
-Packages <- c("tidyverse", "cli")
+Packages <- c("tidyverse", "cli", "HDInterval")
 # Install them
 InstallPackages(Packages)
 
@@ -498,6 +498,7 @@ acf(posterior[, c(1:2, 5:6)], lag.max = 100)
 #### Distribution of the parameters
 
 ```{r}
+library("HDInterval")
 par(mfrow = c(1, 4))
 for (i in c(1:2, 5:6)) {
   title <- paste("Distribution of", names(theta_0)[i])
@@ -510,7 +511,7 @@ for (i in c(1:2, 5:6)) {
   )
   abline(v = median, col = "red")
   abline(v = mean, col = "green")
-  the_hdi <- HDInterval::hdi(
+  the_hdi <- hdi(
     density(posterior[, i]), allowSplit = TRUE, credMass = .95
   )
   ht <- attr(the_hdi, "height")
@@ -555,7 +556,7 @@ ll_prior <- function(theta) {
   # Log-likelihood of each parameter in its a priori distribution
   sum(
     dunif(theta[1], min = 0, max = 1, log = TRUE),       # beta_1
-    dunif(theta[5], min = 6000, max = 2e5, log = TRUE),  # S_T
+    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),  # S_T
     dunif(theta[6], min = 0, max = 1000, log = TRUE)     # sigma    
   )
 }
@@ -616,7 +617,7 @@ for (i in c(1, 5:6)) {
   )
   abline(v = median, col = "red")
   abline(v = mean, col = "green")
-  the_hdi <- HDInterval::hdi(
+  the_hdi <- hdi(
     density(posterior[, i]), allowSplit = TRUE, credMass = .95
   )
   ht <- attr(the_hdi, "height")
@@ -716,7 +717,7 @@ for (i in c(1:6)) {
   )
   abline(v = median, col = "red")
   abline(v = mean, col = "green")
-  the_hdi <- HDInterval::hdi(
+  the_hdi <- hdi(
     density(posterior[, i]), allowSplit = TRUE, credMass = .95
   )
   ht <- attr(the_hdi, "height")
@@ -828,7 +829,7 @@ for (i in c(1:6)) {
   )
   abline(v = median, col = "red")
   abline(v = mean, col = "green")
-  the_hdi <- HDInterval::hdi(
+  the_hdi <- hdi(
     density(posterior[, i]), allowSplit = TRUE, credMass = .95
   )
   ht <- attr(the_hdi, "height")
@@ -940,7 +941,7 @@ for (i in c(1:3, 5:6)) {
   )
   abline(v = median, col = "red")
   abline(v = mean, col = "green")
-  the_hdi <- HDInterval::hdi(
+  the_hdi <- hdi(
     density(posterior[, i]), allowSplit = TRUE, credMass = .95
   )
   ht <- attr(the_hdi, "height")
@@ -1056,9 +1057,97 @@ posterior_no_progress %>%
   theme(legend.position = "none")
 ```
 
+## Comparing predicted and observed numbers of species
+
+```{r}
+# Predicted number of species
+S_pred <- function(
+    data, 
+    S_0, 
+    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
+    theta) {
+  model <- match.arg(model)
+  
+  # A vector for the cumulative sum
+  sum_S <- numeric(length(data$Y) + 1)
+  sum_S[1] <- S_0
+  
+  # Values predicted by the model
+  for (i in seq_along(data$Y)) {
+    # Cumulative sum
+    sum_S[i + 1] <- sum_S[i] + S_i(i, data$T, data$Y, model, theta, sum_S)
+  }
+  return(sum_S)
+}
+```
+
+
+```{r}
+# Plot observed and predicted numbers of species
+fig_S <- function(
+    data, 
+    S_0, 
+    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
+    theta) {
+  model <- match.arg(model)
+
+  tibble(
+    Year = c(1822, 1822 + 5 * data$Y), 
+    Estimated = S_pred(data, S_0, model, theta), 
+    Observed = c(S_0, cumsum(data$S) + S_0)
+  ) %>%
+    pivot_longer(cols = c("Estimated", "Observed")) %>%
+    rename(`Number of Species` = name, Number = value) %>%
+    ggplot() + geom_line(aes(x = Year, y = Number, color = `Number of Species`)) +
+    scale_y_log10() %>%
+    return
+}
+```
+
+Joppa
+
+```{r}
+joppa_median <- which.min(abs(posterior_joppa$S_T - median(posterior_joppa$S_T)))
+
+fig_S(checklist, 1, "Joppa", as.numeric(c(posterior_joppa[joppa_median, 1:2], rep(NA, 2), posterior_joppa[joppa_median, 3:4])))
+
+# Number of species
+posterior_joppa$S_T[joppa_median]
+# Likelihood
+posterior_joppa$data[joppa_median]
+```
 
 
 
+No progress
 
+```{r}
+no_progress_median <- which.min(abs(posterior_no_progress$S_T - median(posterior_no_progress$S_T)))
+
+fig_S(checklist, 1, "NoProgress", as.numeric(c(posterior_no_progress[no_progress_median, 1], rep(NA, 3), posterior_no_progress[no_progress_median, 2:3])))
+
+# Number of species
+posterior_no_progress$S_T[no_progress_median]
+# Likelihood
+posterior_no_progress$data[no_progress_median]
+```
+
+Valeurs les plus vraisemblables
+
+```{r}
+posterior_no_progress %>% 
+  arrange(desc(data)) %>% 
+  head(100) %>% 
+  ggplot() + 
+    geom_density(aes(x = S_T))
+```
+
+
+```{r}
+posterior_no_progress %>% 
+  ggplot(aes(x = S_T, y = data)) + 
+  geom_point() +
+  geom_smooth()
+```
 
 `r if (!knitr:::is_latex_output()) '# References {-}'`
