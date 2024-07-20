@@ -976,19 +976,15 @@ mean(posterior_logistic$data)
 #### Taxonomic efficiency
 
 ```{r}
-tibble(Period = checklist$Y) %>% 
-  mutate(
-    Year = 1817 + 5 * Period,
-    Efficiency = (
-      colMeans(
-        posterior_logistic$beta_1 / (
-          1 + posterior_logistic$beta_2 * outer(exp(-posterior_logistic$beta_3), Period)
-        )
-      )
-    )
-  ) %>% 
-  ggplot(aes(x = Year, y = Efficiency)) +
-  geom_line()
+curve(
+  mean(posterior_logistic$beta_1) / (
+    1 + 
+      mean(posterior_logistic$beta_2) *
+      exp(-mean(posterior_logistic$beta_3) * x)
+  ), 
+  from = min(checklist$Y), 
+  to = max(checklist$Y)
+)
 ```
 
 # Figures
