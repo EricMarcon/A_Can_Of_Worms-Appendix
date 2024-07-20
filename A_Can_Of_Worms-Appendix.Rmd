@@ -14,7 +14,7 @@ author:
   - name: Eric Marcon
 abstract: >
   Appendix of the article to allow reproducing the results and figures.
-date: "`r format(Sys.time(), '%d %B %Y')`"
+date: "`r format(Sys.time(), '%Y %B %d')`"
 url: https://ericmarcon.github.io/A_Can_Of_Worms-Appendix/
 github-repo: ericmarcon/A_Can_Of_Worms-Appendix
 # Language
@@ -606,6 +606,9 @@ The taxonomic efficiency is constant:
 ```{r}
 median(posterior_no_progress$beta_1)
 ```
+
+# Estimating regional diversity and the taxonomic deficit
+
 
 # Figures
 
