@@ -1,7 +1,17 @@
 ---
 title: "A Can Of Worms"
 author:
-  - name: "Thibaud Decaëns et al."
+  - name: Thibaud Decaëns
+  - name: George G. Brown
+  - name: Erin K. Cameron
+  - name: Nico Eisenhauer
+  - name: Sylvain Gérard
+  - name: Arnaud Goulpeau
+  - name: Mickaël Hedde
+  - name: Marie-Eugénie Maggia  
+  - name: Jérôme Mathieu
+  - name: Helen R. P. Phillips
+  - name: Eric Marcon
 abstract: >
   Appendix of the article to allow reproducing the results and figures.
 date: "`r format(Sys.time(), '%d %B %Y')`"
@@ -26,19 +36,11 @@ always_allow_html: yes
 csquotes: true
 output:
   bookdown::html_document2:
+    base_format: distill::distill_article
     toc: yes
     toc_float: yes
     css: style.css
     code_folding: show
-  rmdformats::downcute:
-    use_bookdown: yes
-    lightbox: yes
-  bookdown::pdf_book:
-    template: latex/template.tex
-    citation_package: natbib
-    latex_engine: xelatex
-    keep_tex: yes
-  bookdown::word_document2: default
 ---
 
 ```{r}
@@ -128,7 +130,7 @@ $$
                 \left(S_T - \sum_{j=0}^{i}{S_i} \right)
               \right)
             } 
-            + \mathcal{N}\left(0, \sigma \right)
+            + \mathcal{N}\left(0, \sigma^2 \right)
 $$
 that is estimated below.
 Notations are those of the article: $S_i$ is the number of species described in a given interval ($Y_i = i$, numbered sequentially from 1). 
@@ -149,41 +151,8 @@ $$
                 \left(S_T - \sum_{j=0}^{i}{S_i} \right)
               \right)
             } 
-            + \mathcal{N}\left(0, \sigma \right)
+            + \mathcal{N}\left(0, \sigma^2 \right)
 $$
-
-### Logistic model
-
-We assume the taxonomic efficiency to be a logistic, sigmoid function of time.
-In this model, efficiency increases up to $\beta_1$.
-$\beta_2$ and $\beta_3$ define the inflection point at time $\ln(\beta_2) / \beta_3$.
-
-$$
-\log{S_i} = \log{
-              \left(
-                T_i
-                \left(\frac{\beta_1}{1 + \beta_2 e^{-\beta_3 Y_i}} \right)
-                \left(S_T - \sum_{j=0}^{i}{S_i} \right)
-              \right)
-            } 
-            + \mathcal{N}\left(0, \sigma \right)
-$$
-
-### Polynomial model
-
-We allow the taxonomic efficiency to be a polynomial of order 3 so that efficiency can increase and decrease over time: this is the most flexible form of the model.
-
-$$
-\log{S_i} = \log{
-              \left(
-                T_i
-                \left(\beta_1 + \beta_2 Y_i + \beta_3 Y_i^2 + \beta_4 Y_i^3 \right)
-                \left(S_T - \sum_{j=0}^{i}{S_i} \right)
-              \right)
-            } 
-            + \mathcal{N}\left(0, \sigma \right)
-$$
-
 
 ## Data
 
@@ -221,7 +190,7 @@ We first need a function to calculate $S_i$.
 #'
 #' @param i The time.
 #' @param Y The vector of time periods.
-#' @param model The model to estimate: "Joppa", "NoProgress", "Polynomial" or "Logistic"
+#' @param model The model to estimate: "Joppa", "NoProgress"
 #' @param theta The vector of parameters of the model
 #' @param sum_S The cumulated number of species already discovered.
 #' Only `sum_S[i]` is used.
@@ -231,7 +200,7 @@ S_i <- function(
     i, 
     T, 
     Y, 
-    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
+    model = c("Joppa", "NoProgress"), 
     theta, 
     sum_S) {
   
@@ -241,24 +210,6 @@ S_i <- function(
     T[i] * (theta[1] + theta[2] * Y[i]) * (theta[5] - sum_S[i])
   } else if (model == "NoProgress") {
     T[i] * theta[1] * (theta[5] - sum_S[i])
-  } else if (model == "Polynomial") {
-    (
-      T[i] 
-        * (theta[1] + theta[2] * Y[i] + theta[3] * Y[i]^2 + theta[4] * Y[i]^3) 
-        * (theta[5] - sum_S[i])
-    )
-  } else if (model == "Polynomial2") {
-    (
-      T[i] 
-        * (theta[1] + theta[2] * Y[i] + theta[3] * Y[i]^2) 
-        * (theta[5] - sum_S[i])
-    )
-  } else if (model == "Logistic") {
-    (
-      T[i] 
-      * theta[1] / (1 + theta[2] * exp(-theta[3] * Y[i])) 
-      * (theta[5] - sum_S[i])
-    )
   }
 }
 ```
@@ -274,7 +225,7 @@ ll_data <- function(
     T, 
     Y, 
     S_0, 
-    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
+    model = c("Joppa", "NoProgress"), 
     theta) {
   
   model <- match.arg(model)
@@ -350,7 +301,7 @@ MetropolisMCMC <- function(
     T, 
     Y, 
     S_0,
-    model = c("Joppa", "NoProgress", "Polynomial", "Polynomial2", "Logistic"), 
+    model = c("Joppa", "NoProgress"), 
     sigma_proposal, 
     theta_0, 
     iterations) {
@@ -599,7 +550,7 @@ The acceptance rate in the Markov chain is:
 (acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
 ```
 
-Our choice is to keep an estimation out of 5000.
+We keep an estimation out of 5000.
 
 ```{r}
 # Delete burn-in and keep 1/5000 of the data
@@ -654,337 +605,6 @@ The taxonomic efficiency is constant:
 
 ```{r}
 median(posterior_no_progress$beta_1)
-```
-
-### Polynomial model
-
-The log-likelihood of the priors is:
-
-```{r}
-ll_prior <- function(theta, S_0) {
-  # Log-likelihood of each parameter in its a priori distribution
-  sum(
-    dunif(theta[1], min = -10, max = 10, log = TRUE),       # beta_1
-    dunif(theta[2], min = -10, max = 10, log = TRUE),       # beta_2
-    dunif(theta[3], min = -100, max = 100, log = TRUE),     # beta_3
-    dunif(theta[4], min = -100, max = 100, log = TRUE),     # beta_4
-    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),     # S_T
-    dunif(theta[6], min = 0, max = 10, log = TRUE)          # sigma    
-  )
-}
-```
-
-The model is estimated after setting up the parameters.
-
-```{r}
-# Standard deviation of the random walk (for each parameter). Tuned by trials.
-sigma_proposal <- c(1e-4, 1e-5, 1e-6, 1e-8, 1e3, .1)
-# Initial value of the parameters
-theta_0 <- c(
-  1e-2,  # beta_1
-  1e-6,  # beta_2
-  0,     # beta_3
-  0,     # beta_4
-  1e4,   # S_T
-  1      # sigma
-)
-names(theta_0) <- c("beta_1", "beta_2", "beta_3", "beta_4", "S_T", "sd")
-# Launch the Markov chain
-chain <- MetropolisMCMC(
-  S = checklist$S,
-  T = checklist$T, 
-  Y = checklist$Y,
-  S_0 = S_0, 
-  model = "Polynomial",
-  sigma_proposal = sigma_proposal, 
-  theta_0 = theta_0, 
-  iterations =  iterations
-)
-```
-
-The acceptance rate in the Markov chain is:
-
-```{r}
-(acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
-```
-
-Our choice is to keep an estimation out of 5000.
-
-```{r}
-# Delete burn-in and keep 1/5000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
-```
-
-
-#### Distribution of the parameters
-
-```{r}
-par(mfrow = c(2, 3))
-for (i in c(1:6)) {
-  title <- paste("Distribution of", names(theta_0)[i])
-  median <- format(median(posterior[, i]), digits = 4)
-  mean <- format(mean(posterior[, i]), digits = 4)
-  hist(
-    posterior[, i], 
-    xlab = paste("Median:", median, "\n", "Mean:", mean),
-    main = title
-  )
-  abline(v = median, col = "red")
-  abline(v = mean, col = "green")
-  the_hdi <- hdi(
-    density(posterior[, i]), allowSplit = TRUE, credMass = .95
-  )
-  ht <- attr(the_hdi, "height")
-  segments(the_hdi[, 1], ht, the_hdi[, 2], ht, lwd = 4, col = 'blue')
-}
-```
-
-#### Posterior likelihood
-
-```{r}
-# Save the results
-posterior_polynomial <- as.tibble(posterior)
-# Mean loglikelihood of the data
-mean(posterior_polynomial$data)
-```
-
-
-#### Taxonomic efficiency
-
-```{r}
-tibble(Period = checklist$Y) %>% 
-  mutate(
-    Year = 1817 + 5 * Period,
-    Efficiency = (
-      colMeans(
-        posterior_polynomial$beta_1 
-        + outer(posterior_polynomial$beta_2, Period)
-        + outer(posterior_polynomial$beta_3, Period^2)
-        + outer(posterior_polynomial$beta_4, Period^3)
-      )
-    )
-  ) %>% 
-  ggplot(aes(x = Year, y = Efficiency)) +
-  geom_line()
-```
-
-
-### Polynomial model 2
-
-The log-likelihood of the priors is:
-
-```{r}
-ll_prior <- function(theta, S_0) {
-  # Log-likelihood of each parameter in its a priori distribution
-  sum(
-    dunif(theta[1], min = -10, max = 10, log = TRUE),       # beta_1
-    dunif(theta[2], min = -10, max = 10, log = TRUE),       # beta_2
-    dunif(theta[3], min = -100, max = 100, log = TRUE),     # beta_3
-    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),     # S_T
-    dunif(theta[6], min = 0, max = 10, log = TRUE)          # sigma    
-  )
-}
-```
-
-The model is estimated after setting up the parameters.
-
-```{r}
-# Standard deviation of the random walk (for each parameter). Tuned by trials.
-sigma_proposal <- c(1e-4, 1e-5, 1e-6, 0, 1e3, .1)
-# Initial value of the parameters
-theta_0 <- c(
-  1e-2,  # beta_1
-  1e-6,  # beta_2
-  0,     # beta_3
-  0,     # unused
-  1e4,   # S_T
-  1      # sigma
-)
-names(theta_0) <- c("beta_1", "beta_2", "beta_3", "beta_4", "S_T", "sd")
-# Launch the Markov chain
-chain <- MetropolisMCMC(
-  S = checklist$S,
-  T = checklist$T, 
-  Y = checklist$Y,
-  S_0 = S_0, 
-  model = "Polynomial2",
-  sigma_proposal = sigma_proposal, 
-  theta_0 = theta_0, 
-  iterations =  iterations
-)
-```
-
-The acceptance rate in the Markov chain is:
-
-```{r}
-(acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
-```
-
-Our choice is to keep an estimation out of 5000.
-
-```{r}
-# Delete burn-in and keep 1/5000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
-```
-
-
-#### Distribution of the parameters
-
-```{r}
-par(mfrow = c(2, 3))
-for (i in c(1:6)) {
-  title <- paste("Distribution of", names(theta_0)[i])
-  median <- format(median(posterior[, i]), digits = 4)
-  mean <- format(mean(posterior[, i]), digits = 4)
-  hist(
-    posterior[, i], 
-    xlab = paste("Median:", median, "\n", "Mean:", mean),
-    main = title
-  )
-  abline(v = median, col = "red")
-  abline(v = mean, col = "green")
-  the_hdi <- hdi(
-    density(posterior[, i]), allowSplit = TRUE, credMass = .95
-  )
-  ht <- attr(the_hdi, "height")
-  segments(the_hdi[, 1], ht, the_hdi[, 2], ht, lwd = 4, col = 'blue')
-}
-```
-
-#### Posterior likelihood
-
-```{r}
-# Save the results
-posterior_polynomial2 <- as.tibble(posterior)
-# Mean loglikelihood of the data
-mean(posterior_polynomial2$data)
-```
-
-
-#### Taxonomic efficiency
-
-```{r}
-tibble(Period = checklist$Y) %>% 
-  mutate(
-    Year = 1817 + 5 * Period,
-    Efficiency = (
-      colMeans(
-        posterior_polynomial$beta_1 
-        + outer(posterior_polynomial2$beta_2, Period)
-        + outer(posterior_polynomial2$beta_3, Period^2)
-      )
-    )
-  ) %>% 
-  ggplot(aes(x = Year, y = Efficiency)) +
-  geom_line()
-```
-
-
-### Logistic model
-
-The log-likelihood of the priors is:
-
-```{r}
-ll_prior <- function(theta, S_0) {
-  # Log-likelihood of each parameter in its a priori distribution
-  sum(
-    dunif(theta[1], min = 0, max = 100, log = TRUE),       # beta_1 > 0
-    dunif(theta[2], min = 0, max = 100, log = TRUE),       # beta_2 > 0
-    dunif(theta[3], min = 0, max = 100, log = TRUE),       # beta_3 > 0
-    dunif(theta[5], min = 6000, max = 1e5, log = TRUE),    # S_T
-    dunif(theta[6], min = 0, max = 10, log = TRUE)         # sigma    
-  )
-}
-```
-
-
-The model is estimated after setting up the parameters.
-
-```{r}
-# Standard deviation of the random walk (for each parameter). Tuned by trials.
-# linéaire : 
-sigma_proposal <- c(1e-3, 1, 1e-1, 0, 1e3, .1)
-# Initial value of the parameters
-theta_0 <- c(
-  1e-3,  # beta_1
-  4,     # beta_2
-  1,     # beta_3
-  0,     # unused
-  1E5,   # S_T
-  1      # sigma
-)
-names(theta_0) <- c("beta_1", "beta_2", "beta_3", NA, "S_T", "sd")
-# Launch the Markov chain
-chain <- MetropolisMCMC(
-  S = checklist$S,
-  T = checklist$T, 
-  Y = checklist$Y,
-  S_0 = S_0, 
-  model = "Logistic",
-  sigma_proposal = sigma_proposal, 
-  theta_0 = theta_0, 
-  iterations =  iterations
-)
-```
-The acceptance rate in the Markov chain is:
-
-```{r}
-(acceptance <- 1 - mean(duplicated(chain[-(1:burn_in), ])))
-```
-
-
-Our choice is to keep an estimation out of 5000.
-
-```{r}
-# Delete burn-in and keep 1/5000 of the data
-posterior <- chain[-(1:burn_in), ][seq(1, iterations - burn_in, by = 5000), ]
-```
-
-#### Distribution of the parameters
-
-```{r}
-par(mfrow = c(2, 3))
-for (i in c(1:3, 5:6)) {
-  title <- paste("Distribution of", names(theta_0)[i])
-  median <- format(median(posterior[, i]), digits = 4)
-  mean <- format(mean(posterior[, i]), digits = 4)
-  hist(
-    posterior[, i], 
-    xlab = paste("Median:", median, "\n", "Mean:", mean),
-    main = title
-  )
-  abline(v = median, col = "red")
-  abline(v = mean, col = "green")
-  the_hdi <- hdi(
-    density(posterior[, i]), allowSplit = TRUE, credMass = .95
-  )
-  ht <- attr(the_hdi, "height")
-  segments(the_hdi[, 1], ht, the_hdi[, 2], ht, lwd = 4, col = 'blue')
-}
-```
-
-#### Posterior likelihood
-
-```{r}
-# Save the results
-posterior_logistic <- as.tibble(posterior[, -4])
-# Mean loglikelihood of the data
-mean(posterior_logistic$data)
-```
-
-
-#### Taxonomic efficiency
-
-```{r}
-curve(
-  mean(posterior_logistic$beta_1) / (
-    1 + 
-      mean(posterior_logistic$beta_2) *
-      exp(-mean(posterior_logistic$beta_3) * x)
-  ), 
-  from = min(checklist$Y), 
-  to = max(checklist$Y)
-)
 ```
 
 # Figures
